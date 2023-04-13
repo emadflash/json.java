@@ -181,6 +181,72 @@ class Tokenizer {
         }
     }
 
+    public ArrayList<Token> GetTokens() throws ParseException {
+        ArrayList<Token> ret = new ArrayList<>();
+        while (!this.IsEnd()) {
+            ret.add(this.Tokenize());
+        }
+        return ret;
+    }
+
+    public Token Tokenize() throws ParseException {
+        this.SkipWhitespace();
+        final char cur = this.GetCurrentChar();
+
+        if (Character.isLetter(this.source.charAt(this.idx))) {
+            int oldIdx = this.idx;
+            int cnt = 0;
+            do {
+                cnt++;
+                this.Next();
+                if (cnt > 5)
+                    throw new ParseException("Unknown symbol");
+            } while (!this.IsEnd() && Character.isLetter(this.GetCurrentChar()));
+
+            String idenStr = this.source.substring(oldIdx, this.idx);
+            if (idenStr.equals("true")) {
+                return new TokenBool(true);
+            } else if (idenStr.equals("false")) {
+                return new TokenBool(false);
+            } else if (idenStr.equals("null")) {
+                return new TokenNull();
+            } else {
+                throw new ParseException("Unknown symbol");
+            }
+        } else if (Character.isDigit(cur) || cur == '-') {
+            return this.TokenizeNumber();
+        } else if (this.GetCurrentChar() == '"') {
+            return this.TokenizeString();
+        } else {
+            Token.Type sym;
+            switch (this.GetCurrentChar()) {
+                case '[':
+                    sym = Token.Type.LEFT_PAREN;
+                    break;
+                case ']':
+                    sym = Token.Type.RIGHT_PAREN;
+                    break;
+                case '{':
+                    sym = Token.Type.LEFT_CURLY;
+                    break;
+                case '}':
+                    sym = Token.Type.RIGHT_CURLY;
+                    break;
+                case ',':
+                    sym = Token.Type.COMMA;
+                    break;
+                case ':':
+                    sym = Token.Type.COLON;
+                    break;
+
+                default:
+                    throw new ParseException("Unknown symbol present." + this.GetCurrentChar());
+            }
+            this.Next();
+            return new TokenSymbol(sym);
+        }
+    }
+
     private Pair<Long, Integer> TokenizeNumberBase(int maxdigits) throws ParseException {
         long ret = 0;
         int leadingZeros = 0;
@@ -287,71 +353,6 @@ class Tokenizer {
         return new TokenString(this.source.substring(oldIdx, this.idx - 1));
     }
 
-    public Token Tokenize() throws ParseException {
-        this.SkipWhitespace();
-        final char cur = this.GetCurrentChar();
-
-        if (Character.isLetter(this.source.charAt(this.idx))) {
-            int oldIdx = this.idx;
-            int cnt = 0;
-            do {
-                cnt++;
-                this.Next();
-                if (cnt > 5)
-                    throw new ParseException("Unknown symbol");
-            } while (!this.IsEnd() && Character.isLetter(this.GetCurrentChar()));
-
-            String idenStr = this.source.substring(oldIdx, this.idx);
-            if (idenStr.equals("true")) {
-                return new TokenBool(true);
-            } else if (idenStr.equals("false")) {
-                return new TokenBool(false);
-            } else if (idenStr.equals("null")) {
-                return new TokenNull();
-            } else {
-                throw new ParseException("Unknown symbol");
-            }
-        } else if (Character.isDigit(cur) || cur == '-') {
-            return this.TokenizeNumber();
-        } else if (this.GetCurrentChar() == '"') {
-            return this.TokenizeString();
-        } else {
-            Token.Type sym;
-            switch (this.GetCurrentChar()) {
-                case '[':
-                    sym = Token.Type.LEFT_PAREN;
-                    break;
-                case ']':
-                    sym = Token.Type.RIGHT_PAREN;
-                    break;
-                case '{':
-                    sym = Token.Type.LEFT_CURLY;
-                    break;
-                case '}':
-                    sym = Token.Type.RIGHT_CURLY;
-                    break;
-                case ',':
-                    sym = Token.Type.COMMA;
-                    break;
-                case ':':
-                    sym = Token.Type.COLON;
-                    break;
-
-                default:
-                    throw new ParseException("Unknown symbol present." + this.GetCurrentChar());
-            }
-            this.Next();
-            return new TokenSymbol(sym);
-        }
-    }
-
-    public ArrayList<Token> GetTokens() throws ParseException {
-        ArrayList<Token> ret = new ArrayList<>();
-        while (!this.IsEnd()) {
-            ret.add(this.Tokenize());
-        }
-        return ret;
-    }
 }
 
 abstract class JsonType {
@@ -528,44 +529,7 @@ public class JsonParser {
         this.Next();
     }
 
-    public JsonArray ParseArray() throws ParseException {
-        ArrayList<JsonType> res = new ArrayList<>();
-        this.ExpectType(Token.Type.LEFT_PAREN);
-
-        while (!this.IsEnd()) {
-            res.add(this.ParseExpr());
-            if (this.GetCurrentTokenType() == Token.Type.RIGHT_PAREN)
-                break;
-            this.ExpectType(Token.Type.COMMA);
-        }
-        this.ExpectType(Token.Type.RIGHT_PAREN);
-        return new JsonArray(res);
-    }
-
-    public JsonObj ParseObj() throws ParseException {
-        JsonType key, value;
-        HashMap<String, JsonType> res = new HashMap<>();
-        this.ExpectType(Token.Type.LEFT_CURLY);
-
-        while (!this.IsEnd()) {
-            key = this.ParseExpr();
-            if (key.type != JsonType.Type.JSON_STRING) {
-                throw new ParseException(String.format("%s are not allowed as key. Use STRING instead", key.type));
-            }
-            key = (JsonString) key;
-            this.ExpectType(Token.Type.COLON);
-            value = this.ParseExpr();
-            res.put((String) key.GetValue(), value);
-            if (this.GetCurrentTokenType() == Token.Type.RIGHT_CURLY)
-                break;
-            this.ExpectType(Token.Type.COMMA);
-        }
-
-        this.ExpectType(Token.Type.RIGHT_CURLY);
-        return new JsonObj(res);
-    }
-
-    public JsonType ParseExpr() throws ParseException {
+    public JsonType Parse() throws ParseException {
         final Token tok = this.GetCurrentToken();
         switch (tok.type) {
             case NUMBER: {
@@ -591,5 +555,42 @@ public class JsonParser {
             default:
                 throw new ParseException("Unexpected " + tok.type);
         }
+    }
+
+    public JsonArray ParseArray() throws ParseException {
+        ArrayList<JsonType> res = new ArrayList<>();
+        this.ExpectType(Token.Type.LEFT_PAREN);
+
+        while (!this.IsEnd()) {
+            res.add(this.Parse());
+            if (this.GetCurrentTokenType() == Token.Type.RIGHT_PAREN)
+                break;
+            this.ExpectType(Token.Type.COMMA);
+        }
+        this.ExpectType(Token.Type.RIGHT_PAREN);
+        return new JsonArray(res);
+    }
+
+    public JsonObj ParseObj() throws ParseException {
+        JsonType key, value;
+        HashMap<String, JsonType> res = new HashMap<>();
+        this.ExpectType(Token.Type.LEFT_CURLY);
+
+        while (!this.IsEnd()) {
+            key = this.Parse();
+            if (key.type != JsonType.Type.JSON_STRING) {
+                throw new ParseException(String.format("%s are not allowed as key. Use string instead.", key.type));
+            }
+            key = (JsonString) key;
+            this.ExpectType(Token.Type.COLON);
+            value = this.Parse();
+            res.put((String) key.GetValue(), value);
+            if (this.GetCurrentTokenType() == Token.Type.RIGHT_CURLY)
+                break;
+            this.ExpectType(Token.Type.COMMA);
+        }
+
+        this.ExpectType(Token.Type.RIGHT_CURLY);
+        return new JsonObj(res);
     }
 }
