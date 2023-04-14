@@ -6,7 +6,6 @@ public class JsonObj extends JsonType {
     private HashMap<String, JsonType> value;
 
     public JsonObj(HashMap<String, JsonType> value) {
-        super(JsonType.Type.JSON_OBJ);
         this.value = value;
     }
 

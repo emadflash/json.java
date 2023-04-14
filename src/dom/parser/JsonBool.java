@@ -4,7 +4,6 @@ public class JsonBool extends JsonType {
     public boolean value;
 
     public JsonBool(boolean value) {
-        super(JsonType.Type.JSON_BOOL);
         this.value = value;
     }
 

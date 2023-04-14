@@ -6,7 +6,6 @@ public class JsonArray extends JsonType {
     private ArrayList<JsonType> value;
 
     public JsonArray(ArrayList<JsonType> value) {
-        super(JsonType.Type.JSON_ARRAY);
         this.value = value;
     }
 

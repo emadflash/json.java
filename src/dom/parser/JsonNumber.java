@@ -4,7 +4,6 @@ public class JsonNumber extends JsonType {
     double value;
 
     public JsonNumber(double value) {
-        super(JsonType.Type.JSON_NUMBER);
         this.value = value;
     }
 

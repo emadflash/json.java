@@ -1,7 +1,7 @@
 {
     "name": "John Smith",
     "hello": -123.1234,
-    "email": "john.smith@example.com",
+    123: "john.smith@example.com",
     "phone": {
         "home": "555-1234",
         "work": "555-5678"

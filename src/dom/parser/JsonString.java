@@ -4,7 +4,6 @@ public class JsonString extends JsonType {
     String value;
 
     public JsonString(String value) {
-        super(JsonType.Type.JSON_STRING);
         this.value = value;
     }
 

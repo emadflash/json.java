@@ -2,7 +2,6 @@ package src.dom.parser;
 
 public class JsonNull extends JsonType {
     public JsonNull() {
-        super(JsonType.Type.JSON_NULL);
     }
 
     @Override

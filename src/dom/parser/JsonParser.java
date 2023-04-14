@@ -437,8 +437,9 @@ public class JsonParser {
 
         while (!this.IsEnd()) {
             key = this.Parse();
-            if (key.type != JsonType.Type.JSON_STRING) {
-                throw new ParseException(String.format("%s are not allowed as key. Use string instead.", key.type));
+            if (!(key instanceof JsonString)) {
+                throw new ParseException(
+                        String.format("Expected string as key, got %s", key.getClass()));
             }
             key = (JsonString) key;
             this.ExpectType(Token.Type.COLON);
